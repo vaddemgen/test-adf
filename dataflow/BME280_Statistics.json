@@ -1,5 +1,5 @@
 {
-	"name": "dataflow1",
+	"name": "BME280_Statistics",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
