@@ -30,6 +30,9 @@
 				},
 				{
 					"name": "sort1"
+				},
+				{
+					"name": "cast1"
 				}
 			],
 			"scriptLines": [
@@ -49,7 +52,11 @@
 				"          avgHumidity = avg(humidity),",
 				"          avgPressure = avg(pressure)) ~> aggregate1",
 				"aggregate1 sort(desc(date, true)) ~> sort1",
-				"sort1 sink(allowSchemaDrift: true,",
+				"sort1 cast(output(",
+				"          date as string",
+				"     ),",
+				"     errors: true) ~> cast1",
+				"cast1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> sink1"
