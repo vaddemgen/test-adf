@@ -15,7 +15,7 @@
 			"sinks": [
 				{
 					"dataset": {
-						"referenceName": "BME280_Metrics",
+						"referenceName": "BME280_Transformations",
 						"type": "DatasetReference"
 					},
 					"name": "sink1"
@@ -51,13 +51,6 @@
 				"aggregate1 sort(desc(date, true)) ~> sort1",
 				"sort1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     input(",
-				"          celsiusTemp as string,",
-				"          fahrenheitTemp as string,",
-				"          pressure as string,",
-				"          humidity as string,",
-				"          timestamp as string",
-				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> sink1"
 			]
