@@ -1,0 +1,225 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "coffee-shop-adf"
+		},
+		"AzureBlobStorage1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage1'"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureBlobStorage1')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureBlobStorage1_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BME280_Metrics')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "input"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "celsiusTemp",
+						"type": "String"
+					},
+					{
+						"name": "fahrenheitTemp",
+						"type": "String"
+					},
+					{
+						"name": "pressure",
+						"type": "String"
+					},
+					{
+						"name": "humidity",
+						"type": "String"
+					},
+					{
+						"name": "timestamp",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BME280_Transformations')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureBlobStorage1",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Avro",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "output"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureBlobStorage1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BME280_Statistics')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "BME280_Metrics",
+								"type": "DatasetReference"
+							},
+							"name": "BME280Metrics"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "BME280_Transformations",
+								"type": "DatasetReference"
+							},
+							"name": "OverwriteToAvro"
+						}
+					],
+					"transformations": [
+						{
+							"name": "AddDateColumn"
+						},
+						{
+							"name": "Average"
+						},
+						{
+							"name": "SortByDate"
+						},
+						{
+							"name": "DateToString"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          celsiusTemp as double,",
+						"          fahrenheitTemp as double,",
+						"          pressure as double,",
+						"          humidity as double,",
+						"          timestamp as timestamp 'yyyy-MM-dd\\'T\\'HH:mm:ss.SSS\\'Z\\''",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> BME280Metrics",
+						"BME280Metrics derive(date = toDate(timestamp)) ~> AddDateColumn",
+						"AddDateColumn aggregate(groupBy(date),",
+						"     avgCelsiusTemp = avg(celsiusTemp),",
+						"          avgHumidity = avg(humidity),",
+						"          avgPressure = avg(pressure)) ~> Average",
+						"Average sort(desc(date, true)) ~> SortByDate",
+						"SortByDate cast(output(",
+						"          date as string",
+						"     ),",
+						"     errors: true) ~> DateToString",
+						"DateToString sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> OverwriteToAvro"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/BME280_Metrics')]",
+				"[concat(variables('factoryId'), '/datasets/BME280_Transformations')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/BME280 Aggregations')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "BME280 DataFlow",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "BME280_Statistics",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"BME280Metrics": {},
+									"OverwriteToAvro": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/BME280_Statistics')]"
+			]
+		}
+	]
+}
