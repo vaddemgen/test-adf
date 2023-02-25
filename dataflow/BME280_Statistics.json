@@ -27,6 +27,9 @@
 				},
 				{
 					"name": "aggregate1"
+				},
+				{
+					"name": "sort1"
 				}
 			],
 			"scriptLines": [
@@ -35,7 +38,7 @@
 				"          fahrenheitTemp as double,",
 				"          pressure as double,",
 				"          humidity as double,",
-				"          timestamp as timestamp",
+				"          timestamp as timestamp 'yyyy-MM-dd\\'T\\'HH:mm:ss.SSS\\'Z\\''",
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
@@ -45,7 +48,8 @@
 				"     avgCelsiusTemp = avg(celsiusTemp),",
 				"          avgHumidity = avg(humidity),",
 				"          avgPressure = avg(pressure)) ~> aggregate1",
-				"aggregate1 sink(allowSchemaDrift: true,",
+				"aggregate1 sort(desc(date, true)) ~> sort1",
+				"sort1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          celsiusTemp as string,",
