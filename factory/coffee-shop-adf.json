@@ -1,0 +1,9 @@
+{
+	"name": "coffee-shop-adf",
+	"location": "germanywestcentral",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "5fd83eaa-54e6-4fe6-af2e-5d400932b453",
+		"tenantId": "fb4209f3-f5e8-4086-a9bc-b1be0df4c340"
+	}
+}
