@@ -1,0 +1,62 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "BME280_Metrics",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "BME280_Metrics",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          celsiusTemp as double,",
+				"          fahrenheitTemp as double,",
+				"          pressure as double,",
+				"          humidity as double,",
+				"          timestamp as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source1 derive(date = toDate(timestamp)) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(date),",
+				"     avgCelsiusTemp = avg(celsiusTemp),",
+				"          avgHumidity = avg(humidity),",
+				"          avgPressure = avg(pressure)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          celsiusTemp as string,",
+				"          fahrenheitTemp as string,",
+				"          pressure as string,",
+				"          humidity as string,",
+				"          timestamp as string",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}
