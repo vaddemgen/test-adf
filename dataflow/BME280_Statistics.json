@@ -9,7 +9,7 @@
 						"referenceName": "BME280_Metrics",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "BME280Metrics"
 				}
 			],
 			"sinks": [
@@ -18,21 +18,21 @@
 						"referenceName": "BME280_Transformations",
 						"type": "DatasetReference"
 					},
-					"name": "sink1"
+					"name": "OverwriteToAvro"
 				}
 			],
 			"transformations": [
 				{
-					"name": "derivedColumn1"
+					"name": "AddDateColumn"
 				},
 				{
-					"name": "aggregate1"
+					"name": "Average"
 				},
 				{
-					"name": "sort1"
+					"name": "SortByDate"
 				},
 				{
-					"name": "cast1"
+					"name": "DateToString"
 				}
 			],
 			"scriptLines": [
@@ -45,23 +45,23 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> source1",
-				"source1 derive(date = toDate(timestamp)) ~> derivedColumn1",
-				"derivedColumn1 aggregate(groupBy(date),",
+				"     ignoreNoFilesFound: false) ~> BME280Metrics",
+				"BME280Metrics derive(date = toDate(timestamp)) ~> AddDateColumn",
+				"AddDateColumn aggregate(groupBy(date),",
 				"     avgCelsiusTemp = avg(celsiusTemp),",
 				"          avgHumidity = avg(humidity),",
-				"          avgPressure = avg(pressure)) ~> aggregate1",
-				"aggregate1 sort(desc(date, true)) ~> sort1",
-				"sort1 cast(output(",
+				"          avgPressure = avg(pressure)) ~> Average",
+				"Average sort(desc(date, true)) ~> SortByDate",
+				"SortByDate cast(output(",
 				"          date as string",
 				"     ),",
-				"     errors: true) ~> cast1",
-				"cast1 sink(allowSchemaDrift: true,",
+				"     errors: true) ~> DateToString",
+				"DateToString sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     truncate: true,",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> sink1"
+				"     partitionBy('hash', 1)) ~> OverwriteToAvro"
 			]
 		}
 	}
